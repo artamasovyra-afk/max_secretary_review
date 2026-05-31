@@ -78,7 +78,7 @@ pip install --no-index --find-links=vendor/python-wheels -r backend/requirements
 В build-среде с Docker:
 
 ```bash
-RELEASE_VERSION=1.0.0 scripts/offline/save_docker_images.sh
+RELEASE_VERSION=1.0.1 scripts/offline/save_docker_images.sh
 ```
 
 Скрипт:
@@ -90,14 +90,14 @@ RELEASE_VERSION=1.0.0 scripts/offline/save_docker_images.sh
 Ожидаемые archives:
 
 ```text
-vendor/docker-images/max_secretary_backend_1.0.0.tar
-vendor/docker-images/max_secretary_webapp_1.0.0.tar
+vendor/docker-images/max_secretary_backend_1.0.1.tar
+vendor/docker-images/max_secretary_webapp_1.0.1.tar
 vendor/docker-images/nginx_stable.tar
 vendor/docker-images/postgres_16.tar
 vendor/docker-images/redis_7.tar
 ```
 
-Если используется другой release version, `RELEASE_VERSION` и image tags в `docker-compose.offline.yml` должны быть синхронизированы.
+Если используется release version, отличный от значения по умолчанию в `docker-compose.offline.yml`, передавайте тот же `RELEASE_VERSION` при `config`, `up`, `ps`, `logs` и `exec`.
 
 ## Загрузка Docker Images В Закрытом Контуре
 
@@ -124,14 +124,14 @@ docker images
 Проверить compose:
 
 ```bash
-docker compose -f docker-compose.offline.yml config
+RELEASE_VERSION=1.0.1 docker compose -f docker-compose.offline.yml config
 ```
 
 Запуск:
 
 ```bash
-docker compose -f docker-compose.offline.yml up -d
-docker compose -f docker-compose.offline.yml ps
+RELEASE_VERSION=1.0.1 docker compose -f docker-compose.offline.yml up -d
+RELEASE_VERSION=1.0.1 docker compose -f docker-compose.offline.yml ps
 ```
 
 Наружу публикуется только `nginx:80`. PostgreSQL, Redis, backend, worker и webapp не должны публиковаться наружу напрямую.
@@ -188,14 +188,14 @@ AI_ENABLED=false
 6. Запустить stack:
 
 ```bash
-docker compose -f docker-compose.offline.yml up -d
+RELEASE_VERSION=1.0.1 docker compose -f docker-compose.offline.yml up -d
 ```
 
 7. Применить миграции:
 
 ```bash
-docker compose -f docker-compose.offline.yml exec backend alembic upgrade head
-docker compose -f docker-compose.offline.yml exec backend alembic current
+RELEASE_VERSION=1.0.1 docker compose -f docker-compose.offline.yml exec backend alembic upgrade head
+RELEASE_VERSION=1.0.1 docker compose -f docker-compose.offline.yml exec backend alembic current
 ```
 
 8. Проверить health и WebApp:
@@ -210,9 +210,9 @@ curl -I http://localhost/dashboard
 9. Проверить логи:
 
 ```bash
-docker compose -f docker-compose.offline.yml logs --tail=100 backend
-docker compose -f docker-compose.offline.yml logs --tail=100 worker
-docker compose -f docker-compose.offline.yml logs --tail=100 nginx
+RELEASE_VERSION=1.0.1 docker compose -f docker-compose.offline.yml logs --tail=100 backend
+RELEASE_VERSION=1.0.1 docker compose -f docker-compose.offline.yml logs --tail=100 worker
+RELEASE_VERSION=1.0.1 docker compose -f docker-compose.offline.yml logs --tail=100 nginx
 ```
 
 ## Внешние Интеграции

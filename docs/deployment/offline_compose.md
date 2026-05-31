@@ -81,7 +81,7 @@ Offline compose повторяет production healthchecks для базовых
 - `postgres` проверяется через `pg_isready`;
 - `redis` проверяется через `redis-cli ping`;
 - `backend` проверяет `GET /api/health`;
-- `worker` проверяет свежий heartbeat через `python -m app.workers.jobs --healthcheck`;
+- `worker` проверяет свежий heartbeat легким healthcheck без импорта scheduler-модулей;
 - `webapp` проверяет nginx pid/process/config внутри webapp image;
 - `nginx` проверяет nginx pid/process/config.
 

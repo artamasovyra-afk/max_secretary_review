@@ -1,0 +1,41 @@
+{
+  "update_type": "message_created",
+  "timestamp": 1779439101000,
+  "message": {
+    "body": {
+      "mid": "mock-message-command-group",
+      "seq": 201,
+      "text": "/задача"
+    },
+    "link": {
+      "type": "reply",
+      "chat_id": "mock-chat-group",
+      "message": {
+        "mid": "mock-message-source-group",
+        "seq": 200,
+        "text": "Иван, подготовь отчет до пятницы"
+      },
+      "sender": {
+        "user_id": "mock-user-source",
+        "first_name": "Mock",
+        "last_name": "Author",
+        "name": "Mock Author",
+        "is_bot": false,
+        "last_activity_time": 1779439099000
+      }
+    },
+    "recipient": {
+      "chat_id": "mock-chat-group",
+      "chat_type": "chat"
+    },
+    "sender": {
+      "user_id": "mock-user-command",
+      "first_name": "Mock",
+      "last_name": "Manager",
+      "name": "Mock Manager",
+      "is_bot": false,
+      "last_activity_time": 1779439100000
+    },
+    "timestamp": 1779439101000
+  }
+}

@@ -1,0 +1,1 @@
+"""MAX Bot adapter module."""

@@ -1,0 +1,55 @@
+{
+  "update_type": "message_callback",
+  "timestamp": 1779442213000,
+  "user_locale": "ru",
+  "callback": {
+    "callback_id": "mock-callback-real-001",
+    "payload": "task:start:11111111-1111-4111-8111-111111111111",
+    "timestamp": 1779442213000,
+    "user": {
+      "user_id": "mock-user-callback",
+      "first_name": "Mock",
+      "last_name": "Actor",
+      "name": "Mock Actor",
+      "is_bot": false,
+      "last_activity_time": 1779442200000
+    }
+  },
+  "message": {
+    "body": {
+      "mid": "mock-message-callback-source",
+      "seq": 301,
+      "text": "Тест callback-кнопки Дьяк",
+      "attachments": [
+        {
+          "type": "inline_keyboard",
+          "payload": {
+            "buttons": [
+              [
+                {
+                  "type": "callback",
+                  "text": "Проверить callback",
+                  "payload": "task:start:11111111-1111-4111-8111-111111111111"
+                }
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    "recipient": {
+      "chat_id": "mock-chat-callback",
+      "chat_type": "dialog",
+      "user_id": "mock-user-callback"
+    },
+    "sender": {
+      "user_id": "mock-bot-001",
+      "first_name": "Mock",
+      "name": "Mock Bot",
+      "username": "mock_bot",
+      "is_bot": true,
+      "last_activity_time": 1779442200000
+    },
+    "timestamp": 1779442213000
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "update_type": "message_created",
+  "timestamp": 1779439001000,
+  "user_locale": "ru",
+  "message": {
+    "body": {
+      "mid": "mock-message-command-dialog",
+      "seq": 101,
+      "text": "/задача"
+    },
+    "link": {
+      "type": "reply",
+      "chat_id": "mock-chat-dialog",
+      "message": {
+        "mid": "mock-message-source-dialog",
+        "seq": 100,
+        "text": "Проверить доступ завтра в 15:00"
+      },
+      "sender": {
+        "user_id": "mock-user-source",
+        "first_name": "Mock",
+        "last_name": "Author",
+        "name": "Mock Author",
+        "is_bot": false,
+        "last_activity_time": 1779438999000
+      }
+    },
+    "recipient": {
+      "chat_id": "mock-chat-dialog",
+      "chat_type": "dialog",
+      "user_id": "mock-user-command"
+    },
+    "sender": {
+      "user_id": "mock-user-command",
+      "first_name": "Mock",
+      "last_name": "Manager",
+      "name": "Mock Manager",
+      "is_bot": false,
+      "last_activity_time": 1779439000000
+    },
+    "timestamp": 1779439001000
+  }
+}

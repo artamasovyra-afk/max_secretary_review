@@ -1,0 +1,29 @@
+{
+  "update_type": "message_created",
+  "message": {
+    "recipient": {
+      "chat_id": "mock-chat-001",
+      "chat_type": "group"
+    },
+    "sender": {
+      "user_id": "mock-bot-001",
+      "display_name": "Mock Bot"
+    },
+    "body": {
+      "mid": "mock-message-020",
+      "text": "Открыть задачу"
+    },
+    "attachments": [
+      {
+        "type": "inline_keyboard",
+        "buttons": [
+          {
+            "type": "web_app",
+            "text": "Открыть задачу",
+            "url": "https://example.invalid/tasks/mock-task-001"
+          }
+        ]
+      }
+    ]
+  }
+}

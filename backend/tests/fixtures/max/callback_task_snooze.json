@@ -1,0 +1,22 @@
+{
+  "update_type": "callback_query",
+  "callback_query": {
+    "id": "mock-callback-003",
+    "user": {
+      "user_id": "mock-user-001"
+    },
+    "message": {
+      "recipient": {
+        "chat_id": "mock-chat-001"
+      },
+      "body": {
+        "mid": "mock-message-012"
+      }
+    },
+    "payload": {
+      "action": "task_snooze",
+      "task_id": "mock-task-001",
+      "snooze_for": "PT1H"
+    }
+  }
+}

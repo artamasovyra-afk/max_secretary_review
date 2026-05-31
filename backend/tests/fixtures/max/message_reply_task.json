@@ -1,0 +1,16 @@
+{
+  "chat_id": "mock-chat-001",
+  "user_id": "mock-user-002",
+  "message_id": "mock-message-003",
+  "text": "/задача",
+  "timestamp": "2026-05-21T10:05:00Z",
+  "chat_type": "group",
+  "sender_display_name": "Mock Manager",
+  "sender_username": "mock_manager",
+  "reply_to_message_id": "mock-message-002",
+  "reply_to_text": "Иван, подготовь отчет до пятницы",
+  "reply_to_author_id": "mock-user-003",
+  "reply_to_author_display_name": "Mock Author",
+  "raw_update_type": "message_created",
+  "mock_note": "Sanitized normalized assumption for reply-based task creation."
+}

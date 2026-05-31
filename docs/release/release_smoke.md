@@ -4,9 +4,9 @@
 
 ## Назначение
 
-`scripts/release/smoke_release_1_0.sh` запускает основные smoke scripts, которые проверяют production deployment после сборки или обновления.
+`scripts/release/smoke_release_1_0.sh` выполняет безопасную production smoke-проверку после сборки или обновления.
 
-Скрипт не требует реальных Bitrix24 или MAX секретов. Bitrix24 проверяется в disabled mode, если dev header auth включен для окружения. Если `DEV_AUTH_ENABLED=false`, protected Bitrix24 checks считаются закрытыми корректно и помечаются как skipped.
+Скрипт не требует реальных Bitrix24 или MAX секретов и не мутирует protected API без сессии. После перехода на production WebApp auth protected endpoints без session cookie должны возвращать `401`; для release smoke это считается успешной security-проверкой.
 
 ## Запуск
 
@@ -30,12 +30,14 @@ BASE_URL=http://SERVER_IP scripts/release/smoke_release_1_0.sh
 
 ## Что Проверяется
 
-Скрипт запускает:
+Скрипт проверяет:
 
-- `scripts/smoke_test_mvp.sh`;
-- `scripts/smoke_test_webapp.sh`;
-- `scripts/smoke_test_bitrix24_connector.sh`;
-- `scripts/smoke_test_reminders.sh`, если файл существует и исполняемый.
+- public API: `GET /api/health`;
+- public WebApp routes: `/`, `/tasks`, `/dashboard`, `/group-assignments`, `/settings`, `/site.webmanifest`, `/favicon.ico`;
+- protected API without auth: `GET /api/tasks`, `GET /api/tasks/inbox/summary`, `GET /api/users`, `GET /api/chats`, `POST /api/organizations`, `GET /api/auth/me`;
+- authenticated API smoke: skipped unless a separate safe session fixture is introduced;
+- MAX sender smoke: skipped by default; no real sends;
+- Bitrix24/reminders smoke: skipped in production release smoke because protected writes require auth.
 
 ## Требования
 
@@ -45,7 +47,8 @@ BASE_URL=http://SERVER_IP scripts/release/smoke_release_1_0.sh
 - `jq`;
 - работающий backend/WebApp по `BASE_URL`;
 - production database с примененными миграциями.
-- для полной Bitrix24 disabled smoke-проверки нужен dev auth context через headers; в production с `DEV_AUTH_ENABLED=false` protected checks могут быть пропущены как ожидаемое security-поведение.
+
+Глубокие сценарии из `scripts/smoke_test_mvp.sh`, `scripts/smoke_test_webapp.sh`, `scripts/smoke_test_bitrix24_connector.sh` и `scripts/smoke_test_reminders.sh` остаются полезны для local/test/dev окружений с явным безопасным auth context. Их не следует запускать как production release smoke без session/dev fixture.
 
 ## Ожидаемый Результат
 
@@ -53,6 +56,12 @@ BASE_URL=http://SERVER_IP scripts/release/smoke_release_1_0.sh
 
 ```text
 release_smoke=ok
+public_smoke=ok
+protected_unauth_smoke=ok
+authenticated_smoke=skipped:no_session
+max_sender_smoke=skipped:disabled
+bitrix24_smoke=skipped:auth_disabled
+reminders_smoke=skipped:no_authenticated_context
 ```
 
-Если любой smoke script завершится ошибкой, общий release smoke остановится с ненулевым exit code.
+Если public endpoint недоступен или protected endpoint без auth не возвращает `401`, общий release smoke остановится с ненулевым exit code.

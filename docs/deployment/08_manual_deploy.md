@@ -47,11 +47,11 @@ git fetch --all
 git pull
 ```
 
-Для пилотного релиза `v1.0.0`:
+Для текущего hardening-релиза `v1.0.1`:
 
 ```bash
 git fetch --all --tags
-git checkout v1.0.0
+git checkout v1.0.1
 ```
 
 Проверить:
@@ -128,7 +128,9 @@ curl -I http://localhost/openapi.json
 BASE_URL=http://localhost scripts/release/smoke_release_1_0.sh
 ```
 
-Можно запускать отдельные smoke scripts:
+Release smoke для production не создает организации, пользователей или задачи без auth. Он проверяет public routes и считает `401` на protected API без session cookie ожидаемым успешным результатом.
+
+Отдельные глубокие smoke scripts запускайте только в local/test/dev окружении с явным безопасным auth context:
 
 ```bash
 BASE_URL=http://localhost scripts/smoke_test_mvp.sh

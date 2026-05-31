@@ -81,11 +81,11 @@ docker compose -f docker-compose.prod.yml ps
 curl -f http://localhost/api/health || curl -f http://localhost:8000/api/health
 ```
 
-Если проект деплоится строго на release tag, вместо `git pull` на сервере нужно явно переключить ref:
+Если проект деплоится строго на release tag, вместо `git pull` на сервере нужно явно переключить ref. Для текущей hardening-линии пример:
 
 ```bash
 git fetch --all --tags
-git checkout v1.0.0
+git checkout v1.0.1
 ```
 
 ## 6. Миграции
@@ -125,7 +125,7 @@ curl -I http://localhost/dashboard
 BASE_URL=http://localhost scripts/release/smoke_release_1_0.sh
 ```
 
-Если `DEV_AUTH_ENABLED=false`, protected Bitrix24 smoke checks могут быть пропущены как ожидаемое secure-поведение.
+В production release smoke не выполняет protected writes без WebApp session. `401` на protected API без auth считается ожидаемой security-проверкой; authenticated, Bitrix24 и reminder smoke помечаются как skipped, пока не передан отдельный безопасный auth fixture.
 
 ## 9. Логи
 

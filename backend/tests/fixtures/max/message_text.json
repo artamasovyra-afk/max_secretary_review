@@ -1,0 +1,24 @@
+{
+  "update_type": "message_created",
+  "message": {
+    "recipient": {
+      "chat_id": "mock-chat-001",
+      "chat_type": "group"
+    },
+    "chat": {
+      "id": "mock-chat-001",
+      "type": "group",
+      "title": "Mock MAX Group"
+    },
+    "sender": {
+      "user_id": "mock-user-001",
+      "display_name": "Mock User",
+      "username": "mock_user"
+    },
+    "body": {
+      "mid": "mock-message-001",
+      "text": "/задачи"
+    },
+    "timestamp": "2026-05-21T10:00:00Z"
+  }
+}

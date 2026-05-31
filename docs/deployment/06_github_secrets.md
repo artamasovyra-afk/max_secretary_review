@@ -18,11 +18,9 @@ Repository → Settings → Secrets and variables → Actions → New repository
 - `SSH_PRIVATE_KEY` — приватный ключ `~/.ssh/max_secretary_deploy`.
 - `DEPLOY_PATH` — `/opt/max_secretary/app`.
 
-Для `SSH_PRIVATE_KEY` нужно вставлять весь приватный ключ из локального файла deploy-ключа. Не добавляйте его в репозиторий и не пересылайте в чат.
+Для `SSH_PRIVATE_KEY` нужно вставлять весь приватный ключ целиком, включая стандартные начальную и конечную строки OpenSSH private key. Не вставляйте ключ в документы, issue, pull request, chat или логи.
 
-```text
-<full private key content from ~/.ssh/max_secretary_deploy>
-```
+В документации намеренно не приводится буквальный пример этих строк, чтобы secret scanners не принимали инструкцию за реальный ключ.
 
 ## Дополнительные secrets
 

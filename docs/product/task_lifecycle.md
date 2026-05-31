@@ -4,6 +4,14 @@
 
 Задача в `max_secretary` создается в рамках организации и чата, может иметь нескольких исполнителей, наблюдателей, комментарии, file metadata, ответы исполнителей, приемку результата постановщиком и отдельный статус синхронизации с Битрикс24.
 
+У каждой задачи есть внутренний UUID и короткий пользовательский номер:
+
+- `Task.id` — внутренний UUID для существующих API routes и интеграционных связей;
+- `Task.task_number` — целое число, уникальное в рамках организации;
+- `Task.task_ref` — пользовательский формат, например `#1042`.
+
+Новые задачи получают номер автоматически при создании. Существующие задачи получают номера миграцией в порядке `created_at ASC, id ASC` внутри каждой организации.
+
 ## Основные Статусы
 
 ### `new`
@@ -56,6 +64,114 @@
 14. Если ответ отклонен, `TaskResponse.status=rejected`, создается `TaskAcceptance`, исполнитель возвращается в `in_progress`, задача переходит в `in_progress`.
 15. Если задача отменена, она переходит в `cancelled`.
 16. Если срок истек, worker может перевести активную задачу в `overdue`.
+
+## MAX Command Flow И External Identity Mapping
+
+В реальном MAX webhook `user_id` и `chat_id` являются внешними идентификаторами MAX, а не внутренними UUID базы данных.
+
+Перед созданием задачи bot command flow выполняет безопасное сопоставление:
+
+- `event.user_id` ищется в `User.max_user_id`;
+- если пользователь не найден, создается локальный `User` с fallback display name;
+- `event.chat_id` ищется в `Chat.max_chat_id` внутри default MAX organization;
+- если чат не найден, создается локальный `Chat`;
+- default organization `MAX default organization` создается один раз и затем переиспользуется;
+- повторные webhook events с теми же MAX ids не создают дубли пользователей или чатов;
+- автор команды добавляется как активный `member` resolved-чата;
+- `Task.created_by_user_id` и `Task.chat_id` всегда получают внутренние UUID.
+
+Для reply-команды `/задача`:
+
+- source text берется из `message.link.message.text`;
+- `source_message_id` сохраняет внешний MAX message id из `message.link.message.mid`;
+- если исполнитель явно не указан, задача назначается автору команды;
+- автор исходного reply-сообщения не становится исполнителем автоматически;
+- иерархия Битрикс24 в этом flow не используется и остается future work.
+
+### Назначение Исполнителя Через @mention
+
+MAX command flow поддерживает явное назначение исполнителей через ведущие `@mention` сразу после команды:
+
+```text
+/задача @ivan подготовь отчет до пятницы
+```
+
+Для reply-сценария постановщик может ответить на исходное сообщение:
+
+```text
+/задача @ivan
+```
+
+В этом случае текст задачи берется из reply-сообщения, а `@ivan` используется только как явное указание исполнителя. Если после `@mention` есть содержательный inline-текст, inline-текст имеет приоритет над reply-текстом.
+
+Правила MVP:
+
+- поддерживаются несколько ведущих исполнителей, например `/задача @ivan @maria подготовить материалы`;
+- `@mention` имеет приоритет над self-task fallback: задача не назначается автору команды автоматически, если пользователь явно указал исполнителя;
+- mentions ищутся только среди активных участников текущего чата;
+- matching выполняется по точному `User.max_user_id`, `User.username` или `User.display_name` без учета регистра;
+- неизвестный или неоднозначный `@mention` не назначается наугад;
+- если часть mentions resolved, задача создается с найденными исполнителями и бот сообщает о unresolved/ambiguous mentions;
+- если ни один явно указанный mention не resolved, задача не создается и self-task fallback не применяется;
+- `@` внутри текста задачи не считается исполнителем, если он не находится в leading mention block сразу после `/задача`.
+
+Синхронизация пользователей и иерархии из Bitrix24 остается future work. До нее назначение через `@mention` работает только для пользователей, уже известных локальной базе, обычно после предыдущих MAX webhook events.
+
+### Bot-Driven Assignee Picker
+
+Так как MAX не дает Telegram-like autocomplete участников через bot API, основной UX для пользователей без знания username — выбор исполнителя через inline-кнопки.
+
+Если пользователь пишет:
+
+```text
+/задача подготовить отчет до пятницы
+```
+
+и исполнитель не указан явно, бот не создает видимую задачу без исполнителя. Вместо этого он создает короткоживущий `BotPendingAction` с контекстом команды и отправляет picker:
+
+- известные активные участники текущего чата;
+- `Назначить себе`;
+- `Открыть в WebApp`.
+
+Callback-кнопки используют безопасный payload вида:
+
+```text
+task:assign:<pending_action_id>:<assignee_id>
+task:assign:<pending_action_id>:self
+```
+
+Payload содержит только internal UUID pending action и выбранного internal user, без MAX external ids, токенов, секретов или персональных данных.
+
+После выбора исполнителя callback создает обычную `Task`, назначает выбранного пользователя, закрывает pending action как `completed` и отвечает в MAX: `Исполнитель назначен: <display_name>.`
+
+Chat hygiene:
+
+- после успешного выбора исполнителя бот редактирует служебное picker-сообщение через MAX callback answer;
+- старая inline keyboard убирается пустым `attachments` list;
+- сообщение заменяется коротким итогом: задача создана, исполнитель выбран, срок указан;
+- если cleanup не удался, задача не откатывается, а pending action сохраняет cleanup status/error;
+- повторное нажатие на completed pending action не создает дубль и возвращает friendly no-op.
+
+Альтернативный mention-flow:
+
+- если пользователь отвечает обычным MAX-сообщением с нативным `@mention` на pending selection flow, backend может завершить pending action без нажатия кнопки;
+- источник истины для такого выбора — structured MAX mention markup, а не свободный текст;
+- supported structured paths включают `message.body.markup[*].user_id`, `userId`, nested `user.user_id` / `user.id` и `user_link.user_id` / `userLink.userId`;
+- если markup содержит external MAX user id, он маппится в `User.max_user_id`, а локальный пользователь и active chat membership создаются при необходимости;
+- plain `@text` без structured mention user id не назначает исполнителя наугад;
+- если в сообщении несколько structured mentions, задача не создается автоматически и бот просит выбрать одного исполнителя.
+
+Защиты:
+
+- pending action имеет срок жизни;
+- completed/expired pending action не создает повторную задачу;
+- выбрать исполнителя может только автор исходной команды в MVP;
+- выбранный исполнитель должен быть активным участником текущего чата;
+- `reply /задача` без явного исполнителя сохраняет live-подтвержденный self-task fallback;
+- `/задача @username текст` остается advanced text mode и создает задачу сразу при успешном resolve;
+- unresolved/ambiguous `@mention` может предложить picker, но не назначает исполнителя наугад.
+
+Полный sync списка участников чата через MAX API и Bitrix24 hierarchy/users sync остаются future/P1 work.
 
 ## Несколько Исполнителей
 
@@ -192,8 +308,21 @@ Reminder service формирует payload для напоминаний, но 
 - `no_response_after_deadline` — уведомление, если исполнитель не дал ответ после срока;
 - `waiting_acceptance` — уведомление постановщику, если задача ждет приемки;
 - `daily_summary` — ежедневная сводка задач пользователя.
+- `task_due_in_1h` — чатовый reminder в исходный MAX-чат примерно за 1 час до срока;
+- `task_overdue` — чатовый reminder в исходный MAX-чат после истечения срока.
 
 Scheduler запускается в `worker` container, а не в backend API process.
+
+Safety behavior:
+
+- если `MAX_SENDER_ENABLED=false`, reminder delivery не вызывает MAX API;
+- первая попытка фиксируется как `skipped` / `sender_disabled`;
+- повторные scheduler cycles дедуплицируются по task/user/channel/reminder type в коротком safety window;
+- chat deadline reminders дедуплицируются по `task_id + chat_id + channel=max_chat + reminder_type`;
+- при `MAX_BACKGROUND_NOTIFICATIONS_ENABLED=false` chat reminder delivery фиксируется как `skipped/background_disabled`;
+- пользователи без `User.max_user_id` получают `dm_unavailable` / `missing_max_user_id`;
+- чаты без `Chat.max_chat_id` для fallback или chat reminders получают `missing_max_chat_id`;
+- включать постоянный sender без allowlist/rate-limit hardening нельзя.
 
 ## Bitrix24
 

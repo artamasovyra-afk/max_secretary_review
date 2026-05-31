@@ -8,6 +8,8 @@
 - `at_deadline` — уведомление в момент наступления срока.
 - `after_deadline` — уведомление после истечения срока.
 - `no_response_after_deadline` — уведомление, если после срока нет ответа исполнителя.
+- `task_due_in_1h` — чатовый reminder за 1 час до срока задачи.
+- `task_overdue` — чатовый reminder после истечения срока задачи.
 - `waiting_acceptance` — уведомление постановщику, если задача ждет приемки результата.
 - `daily_summary` — ежедневная сводка задач пользователя.
 
@@ -24,6 +26,19 @@
 ### Уведомить после срока
 
 Система находит активные задачи с истекшим `deadline_at` и формирует уведомление о просрочке.
+
+### Чатовые deadline reminders
+
+Для задач из MAX-чата с `deadline_at` и активными исполнителями worker формирует два chat-level delivery:
+
+- `task_due_in_1h` — один раз примерно за 1 час до срока;
+- `task_overdue` — один раз после истечения срока.
+
+Сообщение отправляется в исходный MAX-чат задачи через `Task.chat_id -> Chat.max_chat_id`, а не в личку. Исполнители упоминаются через MAX mention-ссылку `max://user/<id>`, если у пользователя есть `User.max_user_id`; иначе используется plain display name без fake mention.
+
+Dedup key для MVP: `task_id + chat_id + channel=max_chat + reminder_type`. Повторные scheduler cycles не создают дубль для уже записанного delivery, включая `skipped/background_disabled`.
+
+Если `MAX_BACKGROUND_NOTIFICATIONS_ENABLED=false`, MAX API не вызывается, но delivery фиксируется как `skipped/background_disabled`.
 
 ### Уведомить, если нет ответа исполнителя
 
@@ -57,7 +72,7 @@
 
 ## Ограничения MVP
 
-- Реальная отправка в MAX пока заменена `MaxSender`-заглушкой.
-- `MaxSender` только логирует `chat_id`, `user_id`, текст сообщения и тип напоминания.
+- Реальная отправка background reminders включается только через `MAX_SENDER_ENABLED=true` и `MAX_BACKGROUND_NOTIFICATIONS_ENABLED=true`.
+- В safe live mode `MAX_BACKGROUND_NOTIFICATIONS_ENABLED=false`, поэтому chat reminders записываются как skipped и не вызывают MAX API.
 - Scheduler работает в отдельном worker-контейнере и не запускается в FastAPI backend API.
 - Celery и Celery Beat могут быть подключены позже.

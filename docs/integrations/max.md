@@ -1,6 +1,13 @@
 # MAX Integration
 
-Документ описывает текущее состояние MAX-интеграции в `max_secretary` v1.0.0.
+Документ описывает текущее состояние MAX-интеграции в `max_secretary` v1.1.0-rc.1.
+
+Public domain and webhook setup for the pilot VPS is described in [MAX Webhook Setup](max_webhook_setup.md).
+
+## Public URLs
+
+- WebApp: `https://maxsecretary.ru`
+- MAX webhook: `https://maxsecretary.ru/api/bot/max/webhook`
 
 ## Текущий статус
 
@@ -14,7 +21,8 @@
 - `MaxSender` adapter с двумя режимами: logging stub и реальная отправка;
 - MAX Bot API client adapter на `httpx`;
 - проверка webhook secret через header `X-Max-Webhook-Secret`;
-- настройки `MAX_SENDER_ENABLED`, `MAX_WEBHOOK_SECRET`, `MAX_WEBHOOK_ENABLED`.
+- настройки `MAX_SENDER_ENABLED`, `MAX_WEBHOOK_SECRET`, `MAX_WEBHOOK_ENABLED`;
+- безопасный debug-режим логирования формы webhook payload через `MAX_WEBHOOK_DEBUG_LOG`.
 
 Реальная отправка в MAX по умолчанию выключена. В этом режиме `MaxSender` логирует подготовленное исходящее сообщение и не делает внешние HTTP-запросы.
 
@@ -121,14 +129,38 @@ MVP поддерживает тестовый нормализованный JSO
 
 `MAX_BOT_TOKEN` используется только внутри client adapter и не должен логироваться.
 
+## Webhook Debug Logging
+
+Для sandbox-аудита можно временно включить:
+
+```text
+MAX_WEBHOOK_DEBUG_LOG=true
+```
+
+При включении backend пишет в лог только безопасную диагностическую информацию:
+
+- структуру ключей raw webhook payload;
+- источник normalized event;
+- признак ignored event;
+- маскированные `chat_id`, `user_id`, `message_id`;
+- длину текста сообщения и признак команды.
+
+Backend не логирует полный текст сообщения, token values, webhook secret, имена, телефоны, email или другие содержательные поля raw payload. В production `.env` этот флаг должен оставаться `false`, если нет отдельной диагностической процедуры.
+
 ## Security
 
 - `MAX_BOT_TOKEN` нельзя коммитить, хранить в README или выводить в логи.
+- `MAX_BOT_TOKEN` нельзя присылать в чат, вставлять в скриншоты или хранить вне VPS `.env`/secret store.
 - `MAX_WEBHOOK_SECRET` должен быть задан для production webhook.
+- `MAX_WEBHOOK_SECRET` нельзя коммитить, хранить в README/docs или присылать в чат.
 - Если `MAX_WEBHOOK_SECRET` задан, endpoint требует header `X-Max-Webhook-Secret`.
+- Отсутствующий header `X-Max-Webhook-Secret` возвращает `401`.
 - Неверный webhook secret возвращает `401`.
-- В `APP_ENV=production` пустой `MAX_WEBHOOK_SECRET` логируется как warning при старте приложения.
-- `MAX_WEBHOOK_ENABLED` присутствует в settings и `.env.example` как флаг включения webhook-логики. В v1.0.0 основной runtime guard endpoint — проверка `MAX_WEBHOOK_SECRET`; если на контуре webhook должен быть полностью выключен, дополнительно закрывайте endpoint на уровне reverse proxy/ingress до отдельного hardening изменения.
+- Верный `X-Max-Webhook-Secret` принимает payload и передает событие в обработчик.
+- В `APP_ENV=production`, если `MAX_WEBHOOK_ENABLED=true` и `MAX_WEBHOOK_SECRET` пустой, endpoint возвращает `503 MAX webhook is not configured` и не обрабатывает payload.
+- В `APP_ENV=production` пустой `MAX_WEBHOOK_SECRET` логируется как warning при старте приложения только если webhook включен.
+- Если `MAX_WEBHOOK_ENABLED=false`, endpoint `POST /api/bot/max/webhook` возвращает `404` и не передает событие в обработчик.
+- `MAX_WEBHOOK_DEBUG_LOG=false` является ожидаемым production default; debug logging включается только временно для sandbox-аудита.
 
 ## Deployment
 
@@ -138,14 +170,17 @@ MVP поддерживает тестовый нормализованный JSO
 | --- | --- | --- |
 | `MAX_BOT_TOKEN` | empty | Token MAX bot. Заполняется только при включении реальной отправки. |
 | `MAX_API_BASE_URL` | `https://platform-api.max.ru` | Base URL MAX Bot API. |
-| `MAX_WEBHOOK_SECRET` | empty before setup | Secret для проверки входящих webhook-запросов. Для production webhook должен быть задан. |
-| `MAX_WEBHOOK_ENABLED` | `true` | Флаг включения webhook-логики в конфигурации. |
+| `MAX_WEBHOOK_SECRET` | empty before setup | Secret для проверки входящих webhook-запросов. Для production webhook должен быть задан до включения `MAX_WEBHOOK_ENABLED=true`. |
+| `MAX_WEBHOOK_ENABLED` | `false` | Флаг включения webhook endpoint. Если `false`, входящие события не принимаются. |
+| `MAX_WEBHOOK_DEBUG_LOG` | `false` | Временное безопасное логирование shape webhook events для sandbox-аудита. |
 | `MAX_SENDER_ENABLED` | `false` | Включает реальные исходящие запросы в MAX Bot API. |
 | `MAX_REQUEST_TIMEOUT_SECONDS` | `10` | Timeout исходящих MAX API запросов. |
 
 Безопасное состояние по умолчанию:
 
 - `MAX_SENDER_ENABLED=false`;
+- `MAX_WEBHOOK_DEBUG_LOG=false`;
+- `MAX_WEBHOOK_ENABLED=false`, если webhook должен быть полностью закрыт до подключения реального бота;
 - `MAX_BOT_TOKEN` пустой, пока реальная отправка не включена;
 - `MAX_WEBHOOK_SECRET` должен быть заполнен перед подключением production webhook;
 - внешние MAX-запросы не выполняются, пока явно не включен sender.
@@ -167,7 +202,7 @@ curl http://localhost/api/health
 ```bash
 curl -X POST http://localhost/api/bot/max/webhook \
   -H "Content-Type: application/json" \
-  -H "X-Max-Webhook-Secret: CHANGE_ME" \
+  -H "X-Max-Webhook-Secret: <secret from VPS .env>" \
   -d '{
     "chat_id": "CHAT_UUID",
     "user_id": "USER_UUID",
@@ -175,6 +210,19 @@ curl -X POST http://localhost/api/bot/max/webhook \
     "text": "/задачи"
   }'
 ```
+
+## Sandbox Validation Steps
+
+После модерации тестового бота:
+
+1. Добавить bot credential и webhook secret только в VPS `.env`.
+2. Перезапустить backend/worker через production Compose.
+3. Настроить webhook URL в MAX ЛК: `https://maxsecretary.ru/api/bot/max/webhook`.
+4. Отправить обычное сообщение в sandbox-чате.
+5. Отправить reply-команду `/задача`.
+6. Проверить callback/button payload, если доступен.
+7. Проверить direct messages и fallback при недоступном DM.
+8. Обновить `docs/integrations/max_sandbox_audit.md` только sanitized результатами.
 
 ## Ограничения v1.0.0
 

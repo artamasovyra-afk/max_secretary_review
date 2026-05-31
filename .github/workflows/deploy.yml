@@ -1,0 +1,101 @@
+name: Deploy to VPS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate required secrets
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          set -euo pipefail
+
+          missing=0
+
+          for secret_name in SSH_HOST SSH_USER SSH_PORT SSH_PRIVATE_KEY DEPLOY_PATH; do
+            if [ -z "${!secret_name}" ]; then
+              echo "::error title=Missing required secret::${secret_name} is not set"
+              missing=1
+            fi
+          done
+
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Configure SSH key
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          install -m 600 /dev/null ~/.ssh/max_secretary_deploy_key
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/max_secretary_deploy_key
+
+          ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Deploy over SSH
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          set -euo pipefail
+
+          if [ "$SSH_USER" != "deploy" ]; then
+            echo "Deployment must run as deploy user."
+            exit 1
+          fi
+
+          remote_deploy_path="$(printf '%q' "$DEPLOY_PATH")"
+
+          ssh \
+            -i ~/.ssh/max_secretary_deploy_key \
+            -p "$SSH_PORT" \
+            "$SSH_USER@$SSH_HOST" \
+            "DEPLOY_PATH=$remote_deploy_path bash -se" <<'REMOTE'
+          set -euo pipefail
+
+          cd "$DEPLOY_PATH"
+
+          git fetch --all
+          git pull
+          docker compose -f docker-compose.prod.yml config
+          docker compose -f docker-compose.prod.yml up -d --build
+          docker compose -f docker-compose.prod.yml restart nginx
+          docker compose -f docker-compose.prod.yml ps
+
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://localhost/api/health; then
+              exit 0
+            fi
+
+            echo "Healthcheck attempt ${attempt}/30 failed; waiting..."
+            sleep 2
+          done
+
+          docker compose -f docker-compose.prod.yml logs --tail=100 backend
+          docker compose -f docker-compose.prod.yml logs --tail=100 nginx
+          docker compose -f docker-compose.prod.yml logs --tail=100 postgres
+          docker compose -f docker-compose.prod.yml logs --tail=100 redis
+          exit 1
+          REMOTE

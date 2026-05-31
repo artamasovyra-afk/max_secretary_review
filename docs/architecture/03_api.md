@@ -94,6 +94,21 @@ Main operations:
 
 Task list supports filters such as organization, chat, status, creator, assignee, observer and deadline range.
 
+For the WebApp `Задачи` screen, `GET /api/tasks` also supports:
+
+- `search`: task number refs (`#1042`, `1042`, `T-1042`) or free text;
+- `scope`: `all`, `assigned_to_me`, `created_by_me`, `observed_by_me`, `awaiting_report`, `awaiting_acceptance`;
+- `quick_status`: mobile chip status, one of `new`, `awaiting_report`, `awaiting_acceptance`, `overdue`;
+- `task_type`: task type such as `personal` or `group_assignment`;
+- `chat_id`: source chat filter, still constrained by backend access policy;
+- `participant_role` + `participant_user_id`: unified WebApp participant filter; `participant_role=assignee` maps to assignees and `participant_role=creator` maps to task creator;
+- `assignee_id`, `created_by_user_id`, `observer_id`: retained direct participant filters;
+- `overdue=true`: tasks with `deadline_at < now` and non-final status;
+- `due_today=true`: tasks due inside the current UTC day;
+- `status`: lifecycle status filter.
+
+The route still applies `PolicyService.can_view_task` to every returned task. Frontend filters are UX only and must not be treated as an authorization boundary.
+
 ## Inbox Summary
 
 Endpoint:
@@ -107,10 +122,21 @@ Returns user-centered task buckets:
 - `my_tasks`
 - `created_by_me`
 - `observed_by_me`
+- `new`
 - `waiting_my_response`
 - `waiting_my_acceptance`
 - `overdue`
 - `today`
+
+The response also includes chip-ready counts:
+
+- `today_count`
+- `new_count`
+- `overdue_count`
+- `awaiting_report_count`
+- `awaiting_acceptance_count`
+
+`GET /api/chats` returns only chats visible to the authenticated user: active memberships for `member` and `chat_admin`, and all chats for `super_admin`. `GET /api/chats/{chat_id}/members` is the scoped member list for participant dropdowns.
 
 In the pilot WebApp, `user_id` can still be passed through query parameters for dev/MVP flows. New protected endpoints should use `AuthContext` headers instead.
 

@@ -2,6 +2,173 @@
 
 ## Unreleased
 
+## 1.1.0-rc.3 — 2026-05-23
+
+### Added
+
+- Added bot-driven assignee picker for `/задача` commands without explicit assignee.
+- Added `bot_pending_actions` for pending task creation flows.
+- Added `task:assign` callback flow for selecting assignees from MAX inline buttons.
+- Added structured MAX mention parsing through `message.body.markup`.
+- Added `NormalizedMention` support for MAX mention payloads.
+- Added pending task assignment completion through native MAX `@mention` messages.
+- Added reminder delivery type tracking through `notification_deliveries.reminder_type`.
+- Added reminder deduplication window to prevent repeated delivery spam.
+- Added picker cleanup metadata for pending actions.
+
+### Changed
+
+- `/задача text` without assignee now creates a pending assignee selection flow instead of a visible task without assignee.
+- Picker messages are edited after assignee selection to reduce chat noise.
+- Plain `@text` without structured MAX mention data no longer guesses assignees.
+- Structured MAX mentions can now assign pending tasks to selected users.
+- Reminder sender-disabled behavior now records safe skipped delivery state without calling MAX API.
+- Completed pending actions prevent duplicate task creation from repeated callback events.
+
+### Fixed
+
+- Fixed callback receipt repository wiring issue found during live `task:assign` testing.
+- Fixed repeated reminder delivery rows while sender is disabled.
+- Fixed stale picker buttons remaining active after assignment selection.
+- Fixed task assignment UX for MAX chats where users do not have visible Telegram-like usernames.
+
+### Verified
+
+- Backend tests passed.
+- Ruff passed.
+- WebApp build passed.
+- Live MAX assignee picker flow confirmed.
+- Live MAX structured mention assignment confirmed.
+- Pending action completed successfully after native `@mention`.
+- Task created and assigned to mentioned user.
+- Sender/debug returned to disabled state after tests.
+
+### Limitations
+
+- Native Telegram-like autocomplete inside `/задача @` cannot be forced by the bot.
+- Full chat member sync from MAX API remains future work.
+- Broader DM/reminder production behavior still requires cautious rollout.
+- Final v1.1.0 is not released yet.
+
+### Notes
+
+- This is a release candidate for final validation before v1.1.0.
+
+## 1.1.0-rc.2 — 2026-05-23
+
+### Added
+
+- Added support for official MAX webhook secret header X-Max-Bot-Api-Secret.
+- Added real MAX reply metadata mapping from message.link.
+- Added MAX external identity resolver for User.max_user_id and Chat.max_chat_id.
+- Added WebApp deep link documentation for opening inside MAX.
+- Added real MAX callback payload mapping.
+- Added callback answer support through MAX answers API.
+- Added callback receipt ledger for idempotency.
+- Added logical idempotency for task callback actions.
+- Added active MAX callback button support with intent=default.
+- Added live task callback E2E validation for task:snooze:1h.
+
+### Changed
+
+- Reply-created tasks now work with real MAX external user/chat identifiers.
+- MAX notifications now resolve internal User.id to User.max_user_id before sending.
+- MAX callback events are routed before ordinary message normalization.
+- MAX sender masks recipient identifiers in logs.
+- MAX callback id request logs are suppressed.
+
+### Fixed
+
+- Fixed real MAX reply task creation failing because external MAX ids were passed where internal UUIDs were expected.
+- Fixed callback buttons displaying as inactive by adding the required intent field.
+- Fixed MAX sender attempts to send internal UUIDs to MAX API.
+- Fixed repeated logical task callback actions creating duplicate snoozes when MAX emits new callback ids.
+
+### Verified
+
+- MAX webhook subscription created successfully.
+- Official X-Max-Bot-Api-Secret accepted.
+- Real reply /задача creates a task.
+- Real MAX sender single-message test delivered successfully.
+- MAX deep link opens WebApp inside MAX.
+- Real callback button is active and produces message_callback.
+- Real task callback task:snooze:1h creates TaskReminderSnooze.
+- POST /answers works.
+- Sender/debug were disabled after live tests.
+
+### Limitations
+
+- Broader DM/reminder behavior still requires cautious hardening before permanent sender enablement.
+- Native open_app remains pending if needed beyond deep links.
+- Bitrix24 real pilot sync remains postponed.
+- Production MAX WebApp initData validation should be adapted before production pilot.
+
+### Notes
+
+- This is still a release candidate, not final v1.1.0.
+
+## 1.1.0-rc.1 — 2026-05-21
+
+### Added
+
+- Added normalized MAX event contract for chat-native task flow.
+- Added mock MAX event fixtures for text, reply and callback scenarios.
+- Added natural Russian deadline parser.
+- Added reply-based task creation baseline.
+- Added self-task creation from replied messages.
+- Added bot callback action handling.
+- Added reminder snooze model and service.
+- Added reminder snooze persistence from task callbacks.
+- Added personal reminder delivery tracking.
+- Added daily manager summary service.
+- Added group assignment MVP for MAX chat members.
+- Added required individual reports for group assignments.
+- Added creator attribution snapshots for group assignments.
+- Added task templates.
+- Added scheduled tasks.
+- Added template deadline rules for scheduled group assignments.
+- Added scheduled task run ledger for idempotency.
+- Added WebApp UI for group assignments and group reports.
+
+### Changed
+
+- Reply-created tasks without explicit assignee are now assigned to the command author.
+- Scheduled group assignments now apply template deadline rules.
+- Reminder snooze callbacks now persist actual snooze state.
+- Group assignment reports show concrete creator attribution.
+- WebApp navigation includes "Групповые поручения".
+
+### Infrastructure
+
+- Added Alembic migrations for v1.1 chat-native backend models.
+- Added test coverage for chat-native task flow components.
+- Deployed v1.1 flow to VPS for release-candidate validation.
+
+### Verified
+
+- Backend tests: 440 passed.
+- Backend ruff check: passed.
+- WebApp build: passed.
+- VPS deploy: passed.
+- Alembic upgrade head: passed.
+- Release smoke: release_smoke=ok.
+- HTTPS route /group-assignments: 200.
+
+### Limitations
+
+- Real MAX sandbox payloads are still pending bot moderation.
+- Real reply payload mapping may require adjustment after sandbox capture.
+- Real callback payload mapping may require adjustment after sandbox capture.
+- Direct message delivery behavior must be confirmed with real MAX bot.
+- WebApp open button behavior must be confirmed with real MAX bot.
+- MAX formatting and rate limits must be confirmed in sandbox.
+- Bitrix24 real pilot sync remains postponed.
+
+### Notes
+
+- This is a release candidate for internal/demo validation.
+- Final v1.1.0 should be released only after real MAX sandbox verification.
+
 ## 1.0.1 — 2026-05-20
 
 ### Added

@@ -28,10 +28,10 @@ docs/deployment/offline_delivery_policy.md
 scripts/offline/build_offline_bundle.sh
 ```
 
-Для релиза `v1.0.0` при сохранении Docker images используйте соответствующую версию:
+Для релиза `v1.0.1` при сохранении Docker images используйте соответствующую версию:
 
 ```bash
-RELEASE_VERSION=1.0.0 scripts/offline/save_docker_images.sh
+RELEASE_VERSION=1.0.1 scripts/offline/save_docker_images.sh
 ```
 
 Проверить shell scripts:
@@ -82,7 +82,11 @@ scripts/offline/load_docker_images.sh
 docker images
 ```
 
-Имена image tags должны совпадать с `docker-compose.offline.yml`.
+Имена image tags должны совпадать с `docker-compose.offline.yml`. По умолчанию compose использует `RELEASE_VERSION=1.0.0`; если bundle собран для `1.0.1` или следующего релиза, передавайте ту же переменную при запуске:
+
+```bash
+RELEASE_VERSION=1.0.1 docker compose -f docker-compose.offline.yml up -d
+```
 
 ## 6. Создание .env
 
