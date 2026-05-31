@@ -19,7 +19,7 @@ from app.modules.tasks.enums import (
     TaskType,
 )
 from app.modules.tasks.schemas import TaskCreate, TaskGroupAssignmentCreate, TaskParticipantCreate, TaskUpdate
-from app.modules.tasks.service import TaskService
+from app.modules.tasks.service import PROJECT_TIMEZONE, TaskService
 
 
 class FakeSession:
@@ -989,6 +989,8 @@ async def test_task_service_group_assignment_sends_clean_summary_to_source_chat(
         sender=sender,  # type: ignore[arg-type]
         group_assignment_webapp_url="https://max.ru/secretary_oren_bot?startapp=group_assignment",
     )
+    deadline_at = datetime.now(timezone.utc) + timedelta(days=1, hours=2)
+    expected_deadline = deadline_at.astimezone(PROJECT_TIMEZONE).strftime("%d.%m.%Y %H:%M")
 
     result = await service.create_group_assignment(
         TaskGroupAssignmentCreate(
@@ -996,7 +998,7 @@ async def test_task_service_group_assignment_sends_clean_summary_to_source_chat(
             chat_id=chat_id,
             created_by_user_id=creator_id,
             title="Сдать отчеты",
-            deadline_at=datetime(2026, 5, 31, 13, 0, tzinfo=timezone.utc),
+            deadline_at=deadline_at,
         ),
         AuthContext(user_id=creator_id, organization_id=organization_id, chat_id=chat_id, roles=[ROLE_CHAT_ADMIN]),
     )
@@ -1007,7 +1009,7 @@ async def test_task_service_group_assignment_sends_clean_summary_to_source_chat(
     assert "Задача участникам чата создана ✅" in message
     assert "Текст: Сдать отчеты" in message
     assert "Исполнители: Мария Петрова, Петр Сидоров" in message
-    assert "Срок: 31.05.2026 18:00" in message
+    assert f"Срок: {expected_deadline}" in message
     assert "Отчет: обязателен" in message
     assert "Задача: #1" in message
     assert "payload=" not in message
